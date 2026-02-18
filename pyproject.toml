@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "turingbot"
+version = "3.2.0"
+description = "Python interface for TuringBot, a symbolic regression software that discovers mathematical formulas from data"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.7"
+authors = [
+    {name = "TuringBot Software"},
+]
+keywords = [
+    "symbolic regression",
+    "symbolic regression software",
+    "machine learning",
+    "formula discovery",
+    "scientific computing",
+    "curve fitting",
+    "data science",
+    "mathematical modeling",
+    "simulated annealing",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Education",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Mathematics",
+]
+
+[project.urls]
+Homepage = "https://turingbotsoftware.com"
+Documentation = "https://turingbotsoftware.com/documentation.html"
+Repository = "https://github.com/turingbotsoftware/turingbot-python"
+Download = "https://turingbotsoftware.com/download.html"
