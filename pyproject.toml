@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "turingbot"
-version = "3.3.0"
+version = "3.3.1"
 description = "Python interface for TuringBot, a symbolic regression software that discovers mathematical formulas from data"
 readme = "README.md"
 license = "LicenseRef-Proprietary"

@@ -334,7 +334,7 @@ class simulation:
         if os.name == "nt":
             cmd = f'{path} {input_file} --outfile "{self._outfile}"'
         else:
-            cmd = f'exec {path} {input_file} --outfile "{self._outfile}" 1>/dev/null'
+            cmd = f'exec {path} {input_file} --outfile "{self._outfile}" 1>/dev/null 2>/dev/null'
 
         if config is not None:
             cmd = f'{cmd} "{config}"'
@@ -405,6 +405,7 @@ class simulation:
             self.process = subprocess.Popen(
                 cmd,
                 stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
             )
         else:
             self.process = subprocess.Popen(
