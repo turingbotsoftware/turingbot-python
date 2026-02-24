@@ -4,23 +4,18 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "turingbot"
-version = "3.2.0"
+version = "3.3.0"
 description = "Python interface for TuringBot, a symbolic regression software that discovers mathematical formulas from data"
 readme = "README.md"
-license = "MIT"
+license = "LicenseRef-Proprietary"
 requires-python = ">=3.7"
 authors = [
     {name = "TuringBot Software"},
 ]
 keywords = [
     "symbolic regression",
-    "symbolic regression software",
     "machine learning",
-    "formula discovery",
     "scientific computing",
-    "curve fitting",
-    "data science",
-    "mathematical modeling",
     "simulated annealing",
 ]
 classifiers = [

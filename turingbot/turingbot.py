@@ -1,6 +1,5 @@
 import os
 import platform
-import random
 import shutil
 import subprocess
 import tempfile
@@ -55,6 +54,7 @@ def _save_array_to_csv(data, column_names=None):
         # pandas DataFrame
         if hasattr(data, "to_csv"):
             os.close(fd)
+            fd = None
             data.to_csv(path, index=False)
             return path
 
@@ -68,6 +68,7 @@ def _save_array_to_csv(data, column_names=None):
             )
 
         os.close(fd)
+        fd = None
         header = ""
         if column_names is not None:
             if len(column_names) != data.shape[1]:
@@ -80,6 +81,8 @@ def _save_array_to_csv(data, column_names=None):
         np.savetxt(path, data, delimiter=",", header=header, comments="")
         return path
     except Exception:
+        if fd is not None:
+            os.close(fd)
         if os.path.exists(path):
             os.remove(path)
         raise
@@ -99,12 +102,23 @@ class simulation:
         functions = []
         self.info = lines[0].strip()
 
+        # Determine column layout from header (lines[1] is the actual header;
+        # lines[0] is the "Formulas generated:" info line)
+        header_fields = lines[1].strip().split()
+        has_test_error = "Test_Error" in header_fields
+        func_idx = 3 if has_test_error else 2
+
         for i in range(2, len(lines)):
-            functions.append(lines[i].strip().split())
-            functions[-1][0] = int(functions[-1][0])
-            functions[-1][1] = float(functions[-1][1])
-            if len(functions[-1]) == 4:
-                functions[-1][2] = float(functions[-1][2])
+            parts = lines[i].strip().split()
+            if not parts or len(parts) <= func_idx:
+                continue
+
+            entry = [int(parts[0]), float(parts[1])]
+            if has_test_error:
+                entry.append(float(parts[2]))
+            entry.append(parts[func_idx])
+
+            functions.append(entry)
 
         return functions
 
@@ -137,7 +151,11 @@ class simulation:
         allow_target_delay: bool = False,
         force_all_variables: bool = False,
         custom_formula: str = None,
-        allowed_functions: str = None,
+        custom_constants: str = None,
+        custom_functions: str = None,
+        custom_metric: str = None,
+        allowed_functions=None,
+        function_size: str = None,
     ):
         """
         Start the process with the specified configuration and dataset.
@@ -183,6 +201,7 @@ class simulation:
             13: Residual sum of squares (RSS)
             14: Root mean squared log error (RMSLE)
             15: Percentile error
+            16: Custom metric (requires custom_metric parameter)
         train_test_split : int, optional
             Train/test split. Default is -1 (no test sample).
             Options:
@@ -201,8 +220,8 @@ class simulation:
             Whether to use bound search mode. Default is 0 (deactivated).
             Options:
             0: Deactivated (default)
-            1: Lower bound search
-            2: Upper bound search
+            1: Upper bound search
+            2: Lower bound search
         maximum_formula_complexity : int, optional
             Maximum formula complexity. Default is 60.
         history_size : int, optional
@@ -231,11 +250,46 @@ class simulation:
             Whether to force the solution to include all input variables. Default is False (not forced).
         custom_formula : str, optional
             Custom formula for the search. If not provided, the last column will be treated as the target variable.
-        allowed_functions : str, optional
-            Allowed functions for the formula search. Default: "+ * / pow fmod sin cos tan asin acos atan exp log log2 log10 sqrt sinh cosh tanh asinh acosh atanh abs floor ceil round sign tgamma lgamma erf"
+        custom_constants : str, optional
+            Custom constants, comma-separated name=value pairs. Add |cost
+            after the value to set complexity (default: 1). Examples:
+              "k=1.380649e-23,h=6.62607e-34"
+              "sun=1.989e30|7" (complexity 7)
+        custom_functions : str, optional
+            Custom base functions, comma-separated. One argument = unary,
+            two = binary. Add |cost after the expression to set complexity
+            (default: 4). Examples:
+              "bump(x)=exp(-x*x)"
+              "mydist(x,y)=sqrt(x*x+y*y)"
+              "gauss(x)=exp(-x*x)|2" (complexity 2)
+        custom_metric : str, optional
+            Custom search metric formula. Automatically sets search_metric
+            to 16.
+            'actual' and 'predicted' give per-row values and must be
+            inside sum(), mean(), median(), maxval(), or minval():
+              "mean(pow(actual-predicted,2))"
+              "sqrt(mean(pow(actual-predicted,2)))"
+              "maxval(abs(actual-predicted))"
+            Built-in metrics (rms, mae, mre, maxerr, maxre, accuracy,
+            correlation, nash, logloss, mcc_val, rss, rmsle, n) can
+            be used directly:
+              "0.5*rms+0.5*mae"
+        allowed_functions : str or list of str, optional
+            Allowed functions for the formula search, as a list of strings
+            (e.g. ["+", "sin", "cos"]) or a single string (e.g. "+ sin cos").
+            Default: all functions.
+        function_size : str, optional
+            Override size of base functions. Format: space-separated
+            name:size pairs. Only overrides need to be specified; unspecified
+            functions keep their defaults. Example: "sin:3 cos:3 pow:5 /:3"
         """
 
         self.functions = []
+
+        # Terminate any previous process and clean up its temp files
+        # before overwriting state with new paths
+        if self.process is not None:
+            self.terminate_process()
 
         if input_file is None:
             raise ValueError("input_file is required.")
@@ -270,27 +324,20 @@ class simulation:
         path = f'"{path}"'
         input_file = f'"{input_file}"'
         if outfile is None:
-            if os.name == "nt":
-                self._outfile = tempfile.gettempdir() + r"\turingbot_%d.txt" % random.randint(1000000000, 9999999999)
-            else:
-                self._outfile = tempfile.gettempdir() + "/turingbot_%d.txt" % random.randint(1000000000, 9999999999)
+            fd, self._outfile = tempfile.mkstemp(suffix=".txt", prefix="turingbot_")
+            os.close(fd)
             self._outfile_is_temp = True
         else:
             self._outfile = outfile
             self._outfile_is_temp = False
 
-        if self.process is not None:
-            self.process.kill()
-
         if os.name == "nt":
-            cmd = f"{path} {input_file} --outfile {self._outfile}"
-        elif os.name == "posix":
-            cmd = f"exec {path} {input_file} --outfile {self._outfile} 1>/dev/null 2>/dev/null"
+            cmd = f'{path} {input_file} --outfile "{self._outfile}"'
         else:
-            cmd = f"exec stdbuf -oL {path} {input_file} --outfile {self._outfile} 1>/dev/null 2>/dev/null"
+            cmd = f'exec {path} {input_file} --outfile "{self._outfile}" 1>/dev/null'
 
         if config is not None:
-            cmd = f"{cmd} {config}"
+            cmd = f'{cmd} "{config}"'
         else:
             if search_metric is not None:
                 cmd = f"{cmd} --search-metric {search_metric}"
@@ -330,17 +377,27 @@ class simulation:
                 cmd = f"{cmd} --force-all-variables"
             if custom_formula is not None:
                 cmd = f"{cmd} --custom-formula \"{custom_formula}\""
+            if custom_constants is not None:
+                cmd = f'{cmd} --custom-constants "{custom_constants}"'
+            if custom_functions is not None:
+                cmd = f'{cmd} --custom-functions "{custom_functions}"'
+            if custom_metric is not None:
+                cmd = f'{cmd} --custom-metric "{custom_metric}"'
             if allowed_functions is not None:
+                if isinstance(allowed_functions, list):
+                    allowed_functions = " ".join(allowed_functions)
                 cmd = f"{cmd} --allowed-functions \"{allowed_functions}\""
+            if function_size is not None:
+                cmd = f'{cmd} --function-size "{function_size}"'
 
         if threads is not None:
             cmd = f"{cmd} --threads {int(threads)}"
 
         if predictions_file is not None:
-            cmd = f"{cmd} --predictions-file {predictions_file}"
+            cmd = f'{cmd} --predictions-file "{predictions_file}"'
 
         if formulas_file is not None:
-            cmd = f"{cmd} --formulas-file {formulas_file}"
+            cmd = f'{cmd} --formulas-file "{formulas_file}"'
 
         cmd = f"{cmd} --library-parent-id {str(os.getpid())}"
 
@@ -348,7 +405,6 @@ class simulation:
             self.process = subprocess.Popen(
                 cmd,
                 stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
             )
         else:
             self.process = subprocess.Popen(
@@ -363,7 +419,7 @@ class simulation:
             with open(self._outfile, "r") as f:
                 lines = f.readlines()
 
-            if len(lines) > 0:
+            if len(lines) >= 2:
                 self.functions = self.parse_lines(lines)
 
     def terminate_process(self):

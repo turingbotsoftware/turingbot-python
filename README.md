@@ -2,7 +2,7 @@
 
 Python interface for [TuringBot](https://turingbotsoftware.com), a symbolic regression software that discovers mathematical formulas from data.
 
-TuringBot uses simulated annealing to search the space of possible mathematical expressions, finding accurate and compact formulas that describe your data. It supports 15 search metrics, train/test splits, and a wide range of mathematical functions.
+TuringBot uses simulated annealing to search the space of possible mathematical expressions, finding accurate and compact formulas that describe your data. It supports 16 search metrics (including custom metrics), train/test splits, custom base functions, custom constants, and a wide range of mathematical functions.
 
 ## Installation
 
@@ -145,6 +145,7 @@ x1,x2,y
 | 13 | Residual sum of squares |
 | 14 | Root mean squared log error |
 | 15 | Percentile error |
+| 16 | Custom metric |
 
 ## Parameters
 
@@ -157,11 +158,12 @@ See the full list of parameters in the `start_process` [docstring](https://turin
 - `normalize_dataset` -- Normalize input data
 - `allowed_functions` -- Restrict which math functions to use
 - `custom_formula` -- Provide a formula template
+- `custom_constants` -- Define custom constants (e.g. `"g=9.81,c=299792458"`)
+- `custom_functions` -- Define custom base functions (e.g. `"bump(x)=exp(-x*x)"`)
+- `custom_metric` -- Define a custom error metric (e.g. `"mean(pow(actual-predicted,2))"`)
+- `function_size` -- Override base function sizes (e.g. `"sin:3 cos:3 pow:5"`)
 
 ## Documentation
 
 Full documentation: [turingbotsoftware.com/documentation.html](https://turingbotsoftware.com/documentation.html)
 
-## License
-
-MIT
