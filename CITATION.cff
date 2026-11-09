@@ -1,7 +1,9 @@
 cff-version: 1.2.0
 message: "If you use TuringBot in your research, please cite it as below."
-title: "TuringBot"
+title: "TuringBot: Symbolic Regression Software"
 type: software
+authors:
+  - name: "TuringBot Software"
 url: "https://turingbotsoftware.com"
 keywords:
   - symbolic regression
@@ -9,3 +11,10 @@ keywords:
   - simulated annealing
   - machine learning
   - scientific computing
+preferred-citation:
+  type: software
+  title: "TuringBot: Symbolic Regression Software"
+  authors:
+    - name: "TuringBot Software"
+  year: 2020
+  url: "https://turingbotsoftware.com"

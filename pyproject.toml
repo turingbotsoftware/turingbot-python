@@ -1,11 +1,11 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=77.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "turingbot"
-version = "3.3.1"
-description = "Python interface for TuringBot, a symbolic regression software that discovers mathematical formulas from data"
+version = "4.0"
+description = "Symbolic regression in Python: find the mathematical formula behind your data with TuringBot"
 readme = "README.md"
 license = "LicenseRef-Proprietary"
 requires-python = ">=3.7"
@@ -14,7 +14,11 @@ authors = [
 ]
 keywords = [
     "symbolic regression",
+    "equation discovery",
     "machine learning",
+    "interpretable machine learning",
+    "curve fitting",
+    "scikit-learn",
     "scientific computing",
     "simulated annealing",
 ]
